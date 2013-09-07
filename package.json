@@ -1,0 +1,33 @@
+{
+  "name": "stream-info",
+  "version": "0.0.0",
+  "description": "spiking how to provide info about buffersize, memorysize and other streams info while they are working",
+  "main": "index.js",
+  "scripts": {
+    "test": "tap test/*.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git://github.com/thlorenz/stream-info.git"
+  },
+  "homepage": "https://github.com/thlorenz/stream-info",
+  "dependencies": {},
+  "devDependencies": {
+    "tap": "~0.4.3",
+    "blessed": "0.0.25",
+    "tap-stream": "~0.2.0"
+  },
+  "keywords": [],
+  "author": {
+    "name": "Thorsten Lorenz",
+    "email": "thlorenz@gmx.de",
+    "url": "http://thlorenz.com"
+  },
+  "license": {
+    "type": "MIT",
+    "url": "https://github.com/thlorenz/stream-info/blob/master/LICENSE"
+  },
+  "engine": {
+    "node": ">=0.6"
+  }
+}
