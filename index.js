@@ -3,14 +3,15 @@
 var util = require('util')
   , stream = require('stream')
   , Readable = stream.Readable
+  , Writable = stream.Writable
+  , DevNullWritable = require('./lib/dev-null-writable')
   ;
 
 function StreamWatcher (opts) { 
   opts = opts || {};
-  var interval = opts.interval || 500;
+  this._interval = opts.interval || 500;
 
   this.streams = [];
-  setInterval(this.report.bind(this), interval);
 }
 
 var proto = StreamWatcher.prototype;
@@ -21,18 +22,19 @@ proto.add = function (stream) {
   if (stream._writeableState) info.writeable = stream._writeableState;
   info.name = stream.toString();
   this.streams.push(info);
+
+  return this;
 }
 
-proto.report = function () {
+proto._report = function () {
   var self = this;
   this.streams.forEach(report);
   function report (stream) {
-    if (stream.readable) self.reportReadable(stream.name, stream.readable);
-    if (stream.writeable) self.reportwriteable(stream.name, stream.writeable);
+    if (stream.readable) self._reportReadable(stream.name, stream.readable);
   }
 }
 
-proto.reportReadable = function (name, readable) {
+proto._reportReadable = function (name, readable) {
   var report = {};
   [ 'objectMode', 'highWaterMark', 'flowing', 'pipesCount', 'reading' ].forEach(reportOn);
 
@@ -42,21 +44,28 @@ proto.reportReadable = function (name, readable) {
   console.log(report);
 }
 
-util.inherits(NumberSource, Readable);
-
-function NumberSource (opts) {
-  Readable.call(this, opts);
-  this.idx = 0;
+proto.start = function () {
+  this.startIv = setInterval(this._report.bind(this), this._interval);
+  return this;
 }
 
-NumberSource.prototype._read = function () {
-  this.push(' ' + this.idx++);
+proto.stop = function () {
+  clearInterval(this.startIv);
+  return this;
 }
 
-var numbers = new NumberSource();
+// Test
+if (!module.parent) {
+  var NumberReadable = require('./test/util/number-readable');
 
-// numbers.pipe(process.stdout);
+
+  var numbers = new NumberReadable();
+  numbers.pipe(new DevNullWritable({ throttle: 0 }));
 
 
-var watcher = new StreamWatcher();
-watcher.add(numbers);
+  var watcher = new StreamWatcher();
+  watcher
+    .add(numbers)
+    .start()
+  
+}
