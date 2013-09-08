@@ -18,7 +18,6 @@ function WatcherReadable (opts) {
   this._interval = opts.interval || 500;
 
   this._streams = [];
-  this._reported = {};
   this._pushes = 0;
 }
 
@@ -33,6 +32,8 @@ proto.add = function (stream) {
   if (stream._readableState) info.readable = stream._readableState;
   if (stream._writableState) info.writable = stream._writableState;
   info.name = stream.constructor.name;
+
+  info.index = this._streams.length;
   this._streams.push(info);
 
   return this;
@@ -45,11 +46,11 @@ proto._report = function () {
     var r = { name: stream.name };
     if (stream.readable) r.readable = self._reportReadable(stream.readable);
     if (stream.writable) r.writable = self._reportWritable(stream.writable);
-    self._reported = r;
-  }
+    r.index = stream.index;
 
-  this.push(this._reported);
-  this._pushes++;
+    self.push(r);
+    self._pushes++;
+  }
 }
 
 proto._reportReadable = function (readable) {
@@ -100,7 +101,7 @@ if (!module.parent) {
 
   // unblocks the eventloop for one turn to allow rendering to happen 
   var minThrottle  =  new ThrottleTransform();
-  var longThrottle =  new ThrottleTransform({ throttle: 10000 });
+  var longThrottle =  new ThrottleTransform({ throttle: 100 });
   var devnull      =  new DevNullWritable();
 
   var numberRender = new BlessedRenderTransform({
@@ -134,9 +135,10 @@ if (!module.parent) {
 
   var watcher = new WatcherReadable({ interval: 500 });
   watcher
+    .add(numbers)
     .add(longThrottle)
-//    .pipe(tap())
-   .pipe(watcherRender)
+    .pipe(tap())
+   //.pipe(watcherRender)
   
   numbers
     .pipe(minThrottle)
