@@ -4,7 +4,7 @@ var util = require('util')
   , stream = require('stream')
   , Readable = stream.Readable
   , Writable = stream.Writable
-  , renderBlessed = require('./lib/render-blessed')
+  , BlessedRenderTransform = require('./lib/blessed-render-transform')
   , formatReport = require('./lib/format-report')
   ;
 
@@ -34,8 +34,6 @@ proto._report = function () {
     var r = { name: stream.name };
     if (stream.readable) r.readable = self._reportReadable(stream.readable);
     if (stream.writable) r.writable = self._reportWritable(stream.writable);
-
-    renderBlessed(r, null, formatReport);
   }
 }
 
@@ -95,16 +93,17 @@ if (!module.parent) {
   var powers   =  new PowerTransform();
   var throttle =  new ThrottleTransform({ throttle: 5 });
   var devnull  =  new DevNullWritable();
+  var blessedRender = new BlessedRenderTransform();
 
   var watcher = new StreamWatcher({ interval: 500 });
   watcher
     .add(throttle)
-    .start()
+    //.start()
   
   numbers
     .pipe(throttle)
-    .pipe(powers)
-    //.pipe(process.stdout)
+//    .pipe(powers)
+    .pipe(blessedRender)
     .pipe(devnull)
     ;
 }
