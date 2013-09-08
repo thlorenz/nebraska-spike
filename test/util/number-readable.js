@@ -14,5 +14,5 @@ function NumberReadable (opts) {
 }
 
 NumberReadable.prototype._read = function () {
-  this.push(' ' + this.idx++);
+  this.push('' + this.idx++);
 }
