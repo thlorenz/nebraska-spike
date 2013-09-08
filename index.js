@@ -8,14 +8,24 @@ var util = require('util')
   , formatReport = require('./lib/format-report')
   ;
 
-function StreamWatcher (opts) { 
+util.inherits(WatcherReadable, Readable);
+function WatcherReadable (opts) { 
+  if (!(this instanceof WatcherReadable)) return new WatcherReadable(opts);
+
   opts = opts || {};
+  opts.objectMode = true;
+  Readable.call(this, opts);
   this._interval = opts.interval || 500;
 
   this.streams = [];
+  this.report = {};
 }
 
-var proto = StreamWatcher.prototype;
+var proto = WatcherReadable.prototype;
+
+proto._read = function () {
+  setTimeout(this._report.bind(this), this._interval);
+}
 
 proto.add = function (stream) {
   var info = {};
@@ -34,7 +44,10 @@ proto._report = function () {
     var r = { name: stream.name };
     if (stream.readable) r.readable = self._reportReadable(stream.readable);
     if (stream.writable) r.writable = self._reportWritable(stream.writable);
+    self.report = r;
   }
+
+  this.push(this.report);
 }
 
 proto._reportReadable = function (readable) {
@@ -72,7 +85,7 @@ proto._reportWritable = function (writable) {
 }
 
 proto.start = function () {
-  this.startIv = setInterval(this._report.bind(this), this._interval);
+  //this.startIv = setInterval(this._report.bind(this), this._interval);
   return this;
 }
 
@@ -87,14 +100,16 @@ if (!module.parent) {
     , ThrottleTransform =  require('./test/util/throttle-transform')
     , PowerTransform    =  require('./test/util/power-transform')
     , DevNullWritable   =  require('./lib/dev-null-writable')
+    , tap = require('tap-stream')
     ;
 
   var numbers  =  new NumberReadable();
   var powers   =  new PowerTransform();
-  // we need this to allow rendering to happen
-  var minThrottle =  new ThrottleTransform();
+
+  // unblocks the eventloop for one turn to allow rendering to happen 
+  var minThrottle  =  new ThrottleTransform();
   var longThrottle =  new ThrottleTransform({ throttle: 500 });
-  var devnull  =  new DevNullWritable();
+  var devnull      =  new DevNullWritable();
 
   var numberRender = new BlessedRenderTransform({
     blessed: { 
@@ -114,10 +129,22 @@ if (!module.parent) {
     } 
   });
 
-  var watcher = new StreamWatcher({ interval: 500 });
+  var watcherRender = new BlessedRenderTransform({
+      objectMode: true
+    , blessed: { 
+          label: 'Watcher'
+        , top: 'top'
+        , left: '5%'
+        , padding: { left: 1, right: 1 }
+      } 
+  });
+
+  var watcher = new WatcherReadable({ interval: 500 });
   watcher
-    .add(minThrottle)
-    //.start()
+    .add(numbers)
+    .start()
+//    .pipe(tap())
+   .pipe(watcherRender)
   
   numbers
     .pipe(minThrottle)
