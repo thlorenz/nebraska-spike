@@ -1,11 +1,11 @@
 'use strict';
 
-var util = require('util')
-  , stream = require('stream')
-  , Readable = stream.Readable
-  , Writable = stream.Writable
-  , BlessedRenderTransform = require('./lib/blessed-render-transform')
-  , formatReport = require('./lib/format-report')
+var util                   =  require('util')
+  , stream                 =  require('stream')
+  , Readable               =  stream.Readable
+  , Writable               =  stream.Writable
+  , BlessedRenderTransform =  require('./lib/blessed-render-transform')
+  , formatReport           =  require('./lib/format-report')
   ;
 
 util.inherits(WatcherReadable, Readable);
@@ -17,8 +17,9 @@ function WatcherReadable (opts) {
   Readable.call(this, opts);
   this._interval = opts.interval || 500;
 
-  this.streams = [];
-  this.report = {};
+  this._streams = [];
+  this._reported = {};
+  this._pushes = 0;
 }
 
 var proto = WatcherReadable.prototype;
@@ -32,22 +33,23 @@ proto.add = function (stream) {
   if (stream._readableState) info.readable = stream._readableState;
   if (stream._writableState) info.writable = stream._writableState;
   info.name = stream.constructor.name;
-  this.streams.push(info);
+  this._streams.push(info);
 
   return this;
 }
 
 proto._report = function () {
   var self = this;
-  this.streams.forEach(report);
+  this._streams.forEach(report);
   function report (stream) {
     var r = { name: stream.name };
     if (stream.readable) r.readable = self._reportReadable(stream.readable);
     if (stream.writable) r.writable = self._reportWritable(stream.writable);
-    self.report = r;
+    self._reported = r;
   }
 
-  this.push(this.report);
+  this.push(this._reported);
+  this._pushes++;
 }
 
 proto._reportReadable = function (readable) {
@@ -84,16 +86,6 @@ proto._reportWritable = function (writable) {
   return report;
 }
 
-proto.start = function () {
-  //this.startIv = setInterval(this._report.bind(this), this._interval);
-  return this;
-}
-
-proto.stop = function () {
-  clearInterval(this.startIv);
-  return this;
-}
-
 // Test
 if (!module.parent) {
   var NumberReadable    =  require('./test/util/number-readable')
@@ -108,7 +100,7 @@ if (!module.parent) {
 
   // unblocks the eventloop for one turn to allow rendering to happen 
   var minThrottle  =  new ThrottleTransform();
-  var longThrottle =  new ThrottleTransform({ throttle: 500 });
+  var longThrottle =  new ThrottleTransform({ throttle: 10000 });
   var devnull      =  new DevNullWritable();
 
   var numberRender = new BlessedRenderTransform({
@@ -137,12 +129,12 @@ if (!module.parent) {
         , left: '5%'
         , padding: { left: 1, right: 1 }
       } 
+    , format: formatReport
   });
 
   var watcher = new WatcherReadable({ interval: 500 });
   watcher
-    .add(numbers)
-    .start()
+    .add(longThrottle)
 //    .pipe(tap())
    .pipe(watcherRender)
   
