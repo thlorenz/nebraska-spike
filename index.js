@@ -93,7 +93,22 @@ if (!module.parent) {
   var powers   =  new PowerTransform();
   var throttle =  new ThrottleTransform({ throttle: 5 });
   var devnull  =  new DevNullWritable();
-  var blessedRender = new BlessedRenderTransform();
+  var numberRender = new BlessedRenderTransform({
+    blessed: { 
+        label: 'Numbers'
+      , top: '95%'
+      , left: '70%'
+      , padding: { left: 1, right: 1 }
+    } 
+  });
+  var powerRender = new BlessedRenderTransform({
+    blessed: { 
+        label: 'Powers'
+      , top: '95%'
+      , left: '85%'
+      , padding: { left: 1, right: 1 }
+    } 
+  });
 
   var watcher = new StreamWatcher({ interval: 500 });
   watcher
@@ -102,8 +117,9 @@ if (!module.parent) {
   
   numbers
     .pipe(throttle)
-//    .pipe(powers)
-    .pipe(blessedRender)
+    .pipe(numberRender)
+    .pipe(powers)
+    .pipe(powerRender)
     .pipe(devnull)
     ;
 }
