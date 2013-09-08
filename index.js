@@ -4,7 +4,8 @@ var util = require('util')
   , stream = require('stream')
   , Readable = stream.Readable
   , Writable = stream.Writable
-  , renderReport = require('./lib/render-report')
+  , renderBlessed = require('./lib/render-blessed')
+  , formatReport = require('./lib/format-report')
   ;
 
 function StreamWatcher (opts) { 
@@ -34,7 +35,7 @@ proto._report = function () {
     if (stream.readable) r.readable = self._reportReadable(stream.readable);
     if (stream.writable) r.writable = self._reportWritable(stream.writable);
 
-    renderReport(JSON.stringify(r));
+    renderBlessed(r, null, formatReport);
   }
 }
 
