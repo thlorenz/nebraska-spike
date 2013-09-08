@@ -91,8 +91,11 @@ if (!module.parent) {
 
   var numbers  =  new NumberReadable();
   var powers   =  new PowerTransform();
-  var throttle =  new ThrottleTransform({ throttle: 5 });
+  // we need this to allow rendering to happen
+  var minThrottle =  new ThrottleTransform();
+  var longThrottle =  new ThrottleTransform({ throttle: 500 });
   var devnull  =  new DevNullWritable();
+
   var numberRender = new BlessedRenderTransform({
     blessed: { 
         label: 'Numbers'
@@ -101,6 +104,7 @@ if (!module.parent) {
       , padding: { left: 1, right: 1 }
     } 
   });
+
   var powerRender = new BlessedRenderTransform({
     blessed: { 
         label: 'Powers'
@@ -112,14 +116,14 @@ if (!module.parent) {
 
   var watcher = new StreamWatcher({ interval: 500 });
   watcher
-    .add(throttle)
+    .add(minThrottle)
     //.start()
   
   numbers
-    .pipe(throttle)
+    .pipe(minThrottle)
     .pipe(numberRender)
+    .pipe(longThrottle)
     .pipe(powers)
     .pipe(powerRender)
-    .pipe(devnull)
     ;
 }

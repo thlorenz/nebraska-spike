@@ -14,7 +14,7 @@ function ThrottleTransform (opts) {
 
   opts = opts || {};
   Transform.call(this, opts);
-  this._throttle = opts.throttle || 200;
+  this._throttle = opts.throttle || 0;
 }
 
 ThrottleTransform.prototype._transform = function (chunk, encoding, cb) {
