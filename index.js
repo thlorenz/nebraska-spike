@@ -4,12 +4,50 @@ var util                   =  require('util')
   , stream                 =  require('stream')
   , Readable               =  stream.Readable
   , Writable               =  stream.Writable
+  , xtend                  =  require('xtend')
   , BlessedRenderTransform =  require('./lib/blessed-render-transform')
   , formatReport           =  require('./lib/format-report')
   ;
 
+var defaultOpts = {
+    blessed: { 
+        top: 'top'
+      , left: '5%'
+      , padding: { left: 1, right: 1 }
+    } 
+  , format: formatReport
+};
+
+var Transform =  stream.Transform
+util.inherits(BlessTransform, Transform);
+
+function BlessTransform (opts) {
+  Transform.call(this, opts);
+  this._blessed = opts.blessed;
+}
+
+BlessTransform.prototype._transform = function (val, enc, cb) {
+  this._blessed.blessedValue = val;
+  this.push(this._blessed);
+  cb();
+}
+
+
+function renderStreamState(stream, opts) {
+  opts = opts || {};
+  opts.blessed = xtend(defaultOpts.blessed, opts.blessed);
+  opts = xtend(defaultOpts, opts);
+  opts.objectMode = true;
+
+  opts.blessed.label = opts.blessed.label || (stream.constructor.name + '(W)');
+
+  return new WatcherReadable(stream, opts)
+    .pipe(new BlessTransform(opts))
+    .pipe(new BlessedRenderTransform(opts))
+}
+
 util.inherits(WatcherReadable, Readable);
-function WatcherReadable (opts) { 
+function WatcherReadable (stream, opts) { 
   if (!(this instanceof WatcherReadable)) return new WatcherReadable(opts);
 
   opts = opts || {};
@@ -17,8 +55,11 @@ function WatcherReadable (opts) {
   Readable.call(this, opts);
   this._interval = opts.interval || 500;
 
-  this._streams = [];
-  this._pushes = 0;
+  var info = {};
+  if (stream._readableState) info.readable = stream._readableState;
+  if (stream._writableState) info.writable = stream._writableState;
+  this._label = (opts.blessed && opts.blessed.label) || stream.constructor.name + '(W)';
+  this._streamInfo = info;
 }
 
 var proto = WatcherReadable.prototype;
@@ -27,30 +68,15 @@ proto._read = function () {
   setTimeout(this._report.bind(this), this._interval);
 }
 
-proto.add = function (stream) {
-  var info = {};
-  if (stream._readableState) info.readable = stream._readableState;
-  if (stream._writableState) info.writable = stream._writableState;
-  info.name = stream.constructor.name;
-
-  info.index = this._streams.length;
-  this._streams.push(info);
-
-  return this;
-}
-
 proto._report = function () {
-  var self = this;
-  this._streams.forEach(report);
-  function report (stream) {
-    var r = { name: stream.name };
-    if (stream.readable) r.readable = self._reportReadable(stream.readable);
-    if (stream.writable) r.writable = self._reportWritable(stream.writable);
-    r.index = stream.index;
+  var info = this._streamInfo;
+  var r = { label: this._label };
 
-    self.push(r);
-    self._pushes++;
-  }
+  if (info.readable) r.readable = this._reportReadable(info.readable);
+  if (info.writable) r.writable = this._reportWritable(info.writable);
+  r.index = info.index;
+
+  this.push(r);
 }
 
 proto._reportReadable = function (readable) {
@@ -87,13 +113,24 @@ proto._reportWritable = function (writable) {
   return report;
 }
 
+function offsetRender(stream, x, y) {
+  renderStreamState (
+      stream
+    , { blessed: { 
+          left: x + '%'
+        , top: y + '%' 
+      } 
+    }
+  );
+}
+
 // Test
 if (!module.parent) {
   var NumberReadable    =  require('./test/util/number-readable')
     , ThrottleTransform =  require('./test/util/throttle-transform')
     , PowerTransform    =  require('./test/util/power-transform')
     , DevNullWritable   =  require('./lib/dev-null-writable')
-    , tap = require('tap-stream')
+    , tap               =  require('tap-stream')
     ;
 
   var numbers  =  new NumberReadable();
@@ -122,23 +159,6 @@ if (!module.parent) {
     } 
   });
 
-  var watcherRender = new BlessedRenderTransform({
-      objectMode: true
-    , blessed: { 
-          label: 'Watcher'
-        , top: 'top'
-        , left: '5%'
-        , padding: { left: 1, right: 1 }
-      } 
-    , format: formatReport
-  });
-
-  var watcher = new WatcherReadable({ interval: 500 });
-  watcher
-    .add(numbers)
-    .add(longThrottle)
-    .pipe(tap())
-   //.pipe(watcherRender)
   
   numbers
     .pipe(minThrottle)
@@ -147,4 +167,8 @@ if (!module.parent) {
     .pipe(powers)
     .pipe(powerRender)
     ;
+
+  offsetRender(numbers, 0, 0)
+  offsetRender(longThrottle, 40, 0)
+  offsetRender(powers, 0, 15)
 }
