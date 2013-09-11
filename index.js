@@ -53,14 +53,14 @@ if (!module.parent) {
     , ThrottleTransform =  require('./lib/throttle-transform')
     , DevNullWritable   =  require('./lib/dev-null-writable')
     , tap               =  require('tap-stream')
+    , hwm = 50 
     ;
 
-  var numbers  =  new NumberReadable();
-  var powers   =  new PowerTransform();
+  var numbers  =  new NumberReadable({ highWaterMark: hwm, throttle: 250 });
+  var powers   =  new PowerTransform({ highWaterMark: hwm, throttle: 1000 });
 
   // unblocks the eventloop for one turn to allow rendering to happen 
   var minThrottle  =  new ThrottleTransform();
-  var longThrottle =  new ThrottleTransform({ throttle: 2000 });
   var devnull      =  new DevNullWritable();
 
   var numberRender = new BlessedRenderTransform({
@@ -70,6 +70,7 @@ if (!module.parent) {
       , left: '70%'
       , padding: { left: 1, right: 1 }
     } 
+    , objectMode: true
   });
 
   var powerRender = new BlessedRenderTransform({
@@ -79,18 +80,18 @@ if (!module.parent) {
       , left: '85%'
       , padding: { left: 1, right: 1 }
     } 
+    , objectMode: true
   });
 
   
   numbers
     .pipe(minThrottle)
     .pipe(numberRender)
-    .pipe(longThrottle)
     .pipe(powers)
+    // .on('data', function (d) { console.log(d.toString()) })
     .pipe(powerRender)
     ;
 
   offsetRender(numbers, 0, 0)
-  offsetRender(longThrottle, 40, 0)
-  offsetRender(powers, 0, 20)
+  offsetRender(powers, 45, 0)
 }

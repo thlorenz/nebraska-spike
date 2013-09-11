@@ -11,8 +11,13 @@ util.inherits(NumberReadable, Readable);
 function NumberReadable (opts) {
   Readable.call(this, opts);
   this.idx = 0;
+  this._throttle = opts.throttle;
 }
 
 NumberReadable.prototype._read = function () {
-  this.push('' + this.idx++);
+  var self = this;
+  function respond () {
+    self.push('' + self.idx++);
+  }
+  return this._throttle ? setTimeout(respond, this._throttle) : respond();
 }
