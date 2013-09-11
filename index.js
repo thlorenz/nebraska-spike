@@ -32,6 +32,7 @@ function renderStreamState(stream, opts) {
   return new WatcherReadable(stream, opts)
     .pipe(new BlessTransform(opts))
     .pipe(new BlessedRenderTransform(opts))
+    .pipe(new require('dev-null')({ objectMode: true }));
 }
 
 
@@ -51,17 +52,15 @@ if (!module.parent) {
   var NumberReadable    =  require('./test/util/number-readable')
     , PowerTransform    =  require('./test/util/power-transform')
     , ThrottleTransform =  require('./lib/throttle-transform')
-    , DevNullWritable   =  require('./lib/dev-null-writable')
     , tap               =  require('tap-stream')
-    , hwm = 50 
+    , hwm = process.argv[2] || 20 
     ;
 
+  // unblocks the eventloop for one turn to allow rendering to happen 
+  var minThrottleNums  =  new ThrottleTransform();
+  var minThrottlePows  =  new ThrottleTransform();
   var numbers  =  new NumberReadable({ highWaterMark: hwm, throttle: 250 });
   var powers   =  new PowerTransform({ highWaterMark: hwm, throttle: 1000 });
-
-  // unblocks the eventloop for one turn to allow rendering to happen 
-  var minThrottle  =  new ThrottleTransform();
-  var devnull      =  new DevNullWritable();
 
   var numberRender = new BlessedRenderTransform({
     blessed: { 
@@ -71,6 +70,7 @@ if (!module.parent) {
       , padding: { left: 1, right: 1 }
     } 
     , objectMode: true
+    , highWaterMark: 16000
   });
 
   var powerRender = new BlessedRenderTransform({
@@ -81,13 +81,16 @@ if (!module.parent) {
       , padding: { left: 1, right: 1 }
     } 
     , objectMode: true
+    , highWaterMark: 16000
   });
 
-  
-  numbers
-    .pipe(minThrottle)
+ numbers.pipe(powers)
+ numbers
+    .pipe(minThrottleNums)
     .pipe(numberRender)
-    .pipe(powers)
+
+  powers
+    .pipe(minThrottlePows)
     .pipe(powerRender)
     ;
 

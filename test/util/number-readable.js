@@ -19,5 +19,6 @@ NumberReadable.prototype._read = function () {
   function respond () {
     self.push('' + self.idx++);
   }
-  return this._throttle ? setTimeout(respond, this._throttle) : respond();
+  if (this._throttle) setTimeout(respond, this._throttle);
+  else respond();
 }
