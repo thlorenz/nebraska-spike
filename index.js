@@ -88,7 +88,6 @@ if (!module.parent) {
     .pipe(minThrottle)
     .pipe(numberRender)
     .pipe(powers)
-    // .on('data', function (d) { console.log(d.toString()) })
     .pipe(powerRender)
     ;
 
