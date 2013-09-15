@@ -11,7 +11,10 @@
     "url": "git://github.com/thlorenz/stream-info.git"
   },
   "homepage": "https://github.com/thlorenz/stream-info",
-  "dependencies": {},
+  "dependencies": {
+    "text-table": "~0.1.1",
+    "cursor-back": "~0.1.0"
+  },
   "devDependencies": {
     "tap": "~0.4.3",
     "blessed": "0.0.25",

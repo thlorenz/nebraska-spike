@@ -12,6 +12,8 @@ var util                   =  require('util')
   , formatReport           =  require('./lib/format-report')
   ;
 
+require('cursor-back');
+
 var defaultOpts = {
     blessed: { 
         top: 'top'
@@ -65,8 +67,8 @@ if (!module.parent) {
   var numberRender = new BlessedRenderTransform({
     blessed: { 
         label: 'Numbers'
-      , top: '95%'
-      , left: '70%'
+      , top: '35%'
+      , left: '0%'
       , padding: { left: 1, right: 1 }
     } 
     , objectMode: true
@@ -76,8 +78,8 @@ if (!module.parent) {
   var powerRender = new BlessedRenderTransform({
     blessed: { 
         label: 'Powers'
-      , top: '95%'
-      , left: '85%'
+      , top: '35%'
+      , left: '35%'
       , padding: { left: 1, right: 1 }
     } 
     , objectMode: true
@@ -85,6 +87,7 @@ if (!module.parent) {
   });
 
  numbers.pipe(powers)
+
  numbers
     .pipe(minThrottleNums)
     .pipe(numberRender)
@@ -95,5 +98,5 @@ if (!module.parent) {
     ;
 
   offsetRender(numbers, 0, 0)
-  offsetRender(powers, 45, 0)
+  offsetRender(powers, 35, 0)
 }
